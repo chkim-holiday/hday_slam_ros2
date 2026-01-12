@@ -33,4 +33,7 @@ install(DIRECTORY hday/
   #PATTERN "internal" EXCLUDE
 )
 
+ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
+ament_export_dependencies(Eigen3)
+
 ament_package()

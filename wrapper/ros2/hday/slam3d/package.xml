@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>hday_slam3d_ros2</name>
+  <version>0.1.0</version>
+  <description>ROS2 wrapper of HDAY SLAM 3D</description>
+  <maintainer email="changhyeon.kim@holiday-robotics.com">Changhyeon Kim</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  
+  <depend>rcl_cpp</depend>
+  <depend>hday_slam</depend>
+  
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
