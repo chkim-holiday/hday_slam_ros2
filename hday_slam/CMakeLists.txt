@@ -10,7 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED 
-  hday/slam3d/slam_system.cc
+  hday/slam3d/slam_system/slam_system.cc
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
