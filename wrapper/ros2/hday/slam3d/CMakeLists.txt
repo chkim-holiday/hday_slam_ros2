@@ -10,6 +10,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+
 find_package(hday_slam REQUIRED)
 
 # Include directories
@@ -17,36 +22,31 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-add_executable(${PROJECT_NAME}_node
-  node.cc
+add_executable(slam_system_node
+  slam_system_node.cc
 )
-
-ament_target_dependencies(${PROJECT_NAME}_node
+ament_target_dependencies(slam_system_node
   rclcpp
+  sensor_msgs
+  geometry_msgs
+  nav_msgs
+  tf2_ros
   hday_slam
 )
-
-target_include_directories(${PROJECT_NAME}_node PUBLIC
+target_include_directories(slam_system_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   $<INSTALL_INTERFACE:include>
 )
 
 # Install
-install(TARGETS ${PROJECT_NAME}_node
+install(TARGETS slam_system_node
   DESTINATION lib/${PROJECT_NAME}
 )
-
 install(DIRECTORY launch/
   DESTINATION share/${PROJECT_NAME}/launch
 )
-
 install(DIRECTORY config/
   DESTINATION share/${PROJECT_NAME}/config
 )
-
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
-endif()
 
 ament_package()

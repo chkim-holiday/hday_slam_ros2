@@ -1,0 +1,15 @@
+/**:
+  ros__parameters:
+    lidar:
+      livox_lidar:
+        use_motion_undistortion: true 
+        range: [0.1, 40.0] # [m]
+        extrinsics: # Extrinsic pose from the base link to the sensor frame
+          xyz: [0.0, 0.0, 0.0] # [m]
+          rpy: [0.0, 0.0, 0.0] # [rad]
+    imu:
+      livox_imu:
+        linear_acceleration_scale: 9.81 # Scale factor to convert to [m/s^2]
+        extrinsics: # Extrinsic pose from the base link to the sensor frame
+          xyz: [0.0, 0.0, 0.0] # [m]
+          rpy: [0.0, 0.0, 0.0] # [rad]
