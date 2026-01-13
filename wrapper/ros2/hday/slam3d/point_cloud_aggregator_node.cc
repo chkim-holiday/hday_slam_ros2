@@ -3,9 +3,9 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-#include "slam_system_ros2.h"
+#include "point_cloud_aggregator_ros2.h"
 
-#define NODE_NAME "slam_system_node"
+#define NODE_NAME "point_cloud_aggregator_node"
 
 std::shared_ptr<rclcpp::Node> node = nullptr;
 void HandleSignal(int signum) {
@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
 
   try {
     rclcpp::init(argc, argv);
-    node = std::make_shared<hday::slam3d::SlamSystemRos2>(NODE_NAME);
+    node = std::make_shared<PointCloudAggregatorRos2>(NODE_NAME);
     rclcpp::spin(node);
   } catch (const std::exception& e) {
     RCLCPP_ERROR(rclcpp::get_logger("rclcpp"),

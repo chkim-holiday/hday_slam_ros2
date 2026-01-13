@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-
 
 def generate_launch_description():
     # Declare arguments
@@ -27,11 +25,20 @@ def generate_launch_description():
         'parameters.yaml'
     ])
     
-    # Node
-    slam_node = Node(
+    # Nodes
+    slam_system_node = Node(
         package=package_name,
-        executable='hday_slam3d_ros2_node',
-        name='hday_slam3d_node',
+        executable='slam_system_node',
+        name='slam_system_node',
+        output='screen',
+        parameters=[params_file],
+        remappings=[]
+    )
+    
+    point_cloud_aggregator_node = Node(
+        package=package_name,
+        executable='point_cloud_aggregator_node',
+        name='point_cloud_aggregator_node',
         output='screen',
         parameters=[params_file],
         remappings=[]
@@ -39,5 +46,6 @@ def generate_launch_description():
     
     return LaunchDescription([
         config_arg,
-        slam_node,
+        slam_system_node,
+        point_cloud_aggregator_node
     ])
