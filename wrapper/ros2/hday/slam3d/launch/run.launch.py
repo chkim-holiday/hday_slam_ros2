@@ -4,6 +4,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+import yaml  # PyYAML 라이브러리
 
 def generate_launch_description():
     # Declare arguments
@@ -18,29 +19,34 @@ def generate_launch_description():
     config_name = LaunchConfiguration('config')
     
     # Parameter file path
-    params_file = PathJoinSubstitution([
+    parameter_file = PathJoinSubstitution([
         FindPackageShare(package_name),
         'config',
         config_name,
         'parameters.yaml'
     ])
+    sensor_file = PathJoinSubstitution([
+        FindPackageShare(package_name),
+        'config',
+        config_name,
+        'sensors.yaml'
+    ])
     
     # Nodes
-    slam_system_node = Node(
-        package=package_name,
-        executable='slam_system_node',
-        name='slam_system_node',
-        output='screen',
-        parameters=[params_file],
-        remappings=[]
-    )
-    
     point_cloud_aggregator_node = Node(
         package=package_name,
         executable='point_cloud_aggregator_node',
         name='point_cloud_aggregator_node',
         output='screen',
-        parameters=[params_file],
+        parameters=[parameter_file, sensor_file],
+        remappings=[]
+    )
+    slam_system_node = Node(
+        package=package_name,
+        executable='slam_system_node',
+        name='slam_system_node',
+        output='screen',
+        parameters=[parameter_file, sensor_file],
         remappings=[]
     )
     
