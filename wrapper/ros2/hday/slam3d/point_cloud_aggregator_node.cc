@@ -21,7 +21,10 @@ int main(int argc, char** argv) {
 
   try {
     rclcpp::init(argc, argv);
-    node = std::make_shared<PointCloudAggregatorRos2>(NODE_NAME);
+
+    rclcpp::NodeOptions options;
+    options.automatically_declare_parameters_from_overrides(true);
+    node = std::make_shared<PointCloudAggregatorRos2>(NODE_NAME, options);
     rclcpp::spin(node);
   } catch (const std::exception& e) {
     RCLCPP_ERROR(rclcpp::get_logger("rclcpp"),
