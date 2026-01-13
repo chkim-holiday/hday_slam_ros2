@@ -16,17 +16,18 @@ using PointCloud2Msg = sensor_msgs::msg::PointCloud2;
 
 class PointCloudAggregatorRos2 : public rclcpp::Node {
  public:
-  explicit PointCloudAggregatorRos2(const std::string& node_name)
-      : Node(node_name) {
-    // TODO(@chkim): load parameters from yaml file.
+  explicit PointCloudAggregatorRos2(
+      const std::string& node_name,
+      const rclcpp::NodeOptions& options = rclcpp::NodeOptions())
+      : Node(node_name, options) {
     hday::slam3d::point_cloud_aggregator::Parameters params;
+    if (!LoadParameters())
+      throw std::runtime_error("Failed to load parameters.");
+
     point_cloud_aggregator_ = std::make_unique<
         hday::slam3d::point_cloud_aggregator::PointCloudAggregator>(params);
 
     InitializeSubscribers();
-
-    RCLCPP_INFO(this->get_logger(),
-                "PointCloudAggregatorRos2 node initialized");
   }
 
   ~PointCloudAggregatorRos2() {
@@ -34,6 +35,32 @@ class PointCloudAggregatorRos2 : public rclcpp::Node {
   }
 
  private:
+  bool LoadParameters() {
+    bool success = true;
+
+    // Load sensor informations
+    std::vector<std::string> lidar_names;
+    std::string imu_name;
+    success &= get_parameter_or("slam3d.sensors.lidar", lidar_names,
+                                std::vector<std::string>{});
+    success &= get_parameter_or("slam3d.sensors.imu", imu_name, std::string{});
+
+    std::cout << "Total (" << lidar_names.size() << ") lidars are found:\n";
+    for (const auto& name : lidar_names) std::cout << " " << name << std::endl;
+    std::cout << "Loaded IMU name: " << imu_name << std::endl;
+
+    if (!success) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to load sensor informations.");
+      return false;
+    }
+
+    hday::slam3d::point_cloud_aggregator::Parameters params;
+
+    return true;
+  }
+
+  bool LoadSensorParameters() { return true; }
+
   void InitializeSubscribers() {
     std::vector<std::string> sensor_names = {"lidar_front", "lidar_rear",
                                              "lidar_left", "lidar_right"};
