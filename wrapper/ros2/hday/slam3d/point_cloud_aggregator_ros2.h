@@ -14,20 +14,29 @@
 using ImuMsg = sensor_msgs::msg::Imu;
 using PointCloud2Msg = sensor_msgs::msg::PointCloud2;
 
+struct SensorTopicInfo {
+  std::vector<std::pair<std::string, std::string>> lidar_name_and_topic_names;
+  std::pair<std::string, std::string> imu_name_and_topic_name;
+};
+
 class PointCloudAggregatorRos2 : public rclcpp::Node {
  public:
   explicit PointCloudAggregatorRos2(
       const std::string& node_name,
       const rclcpp::NodeOptions& options = rclcpp::NodeOptions())
       : Node(node_name, options) {
-    hday::slam3d::point_cloud_aggregator::Parameters params;
-    if (!LoadParameters())
+    // Initialize core
+    hday::slam3d::point_cloud_aggregator::Parameters parameters;
+    if (!LoadParameters(&parameters))
       throw std::runtime_error("Failed to load parameters.");
-
     point_cloud_aggregator_ = std::make_unique<
-        hday::slam3d::point_cloud_aggregator::PointCloudAggregator>(params);
+        hday::slam3d::point_cloud_aggregator::PointCloudAggregator>(parameters);
 
-    InitializeSubscribers();
+    // Initialize ROS2 subscribers
+    SensorTopicInfo sensor_topic_info;
+    if (!LoadSensorTopicInfo(&sensor_topic_info))
+      throw std::runtime_error("Failed to load sensor topic informations.");
+    InitializeSubscribers(sensor_topic_info);
   }
 
   ~PointCloudAggregatorRos2() {
@@ -35,47 +44,84 @@ class PointCloudAggregatorRos2 : public rclcpp::Node {
   }
 
  private:
-  bool LoadParameters() {
+  bool LoadSensorTopicInfo(SensorTopicInfo* sensor_topic_info) {
     bool success = true;
 
-    // Load sensor informations
     std::vector<std::string> lidar_names;
-    std::string imu_name;
+    std::vector<std::string> lidar_topic_names;
     success &= get_parameter_or("slam3d.sensors.lidar", lidar_names,
                                 std::vector<std::string>{});
-    success &= get_parameter_or("slam3d.sensors.imu", imu_name, std::string{});
-
     std::cout << "Total (" << lidar_names.size() << ") lidars are found:\n";
-    for (const auto& name : lidar_names) std::cout << " " << name << std::endl;
-    std::cout << "Loaded IMU name: " << imu_name << std::endl;
+    std::cout << "  sensor name:topic name\n";
+    lidar_topic_names.resize(lidar_names.size());
+    for (size_t i = 0; i < lidar_names.size(); ++i) {
+      const std::string& lidar_name = lidar_names[i];
+      std::string& lidar_topic_name = lidar_topic_names[i];
+      success &= get_parameter_or("sensors.lidar." + lidar_name + ".topic_name",
+                                  lidar_topic_name, std::string{});
+      if (lidar_topic_name.empty())
+        RCLCPP_ERROR(this->get_logger(),
+                     "Lidar sensor '%s' has no topic_name parameter.",
+                     lidar_name.c_str());
+      std::cout << "  " << lidar_name << ":" << lidar_topic_name << std::endl;
+    }
+
+    std::string imu_name;
+    std::string imu_topic_name;
+    success &= get_parameter_or("slam3d.sensors.imu", imu_name, std::string{});
+    success &= get_parameter_or("sensors.imu." + imu_name + ".topic_name",
+                                imu_topic_name, std::string{});
+    std::cout << "Loaded IMU: " << std::endl;
+    std::cout << "  sensor name:topic name\n";
+    std::cout << "  " << imu_name << ":" << imu_topic_name << std::endl;
 
     if (!success) {
       RCLCPP_ERROR(this->get_logger(), "Failed to load sensor informations.");
       return false;
     }
 
-    hday::slam3d::point_cloud_aggregator::Parameters params;
+    sensor_topic_info->lidar_name_and_topic_names.clear();
+    sensor_topic_info->lidar_name_and_topic_names.reserve(lidar_names.size());
+    for (size_t i = 0; i < lidar_names.size(); ++i) {
+      sensor_topic_info->lidar_name_and_topic_names.emplace_back(
+          lidar_names[i], lidar_topic_names[i]);
+    }
+    sensor_topic_info->imu_name_and_topic_name = {imu_name, imu_topic_name};
 
-    return true;
+    return success;
   }
 
-  bool LoadSensorParameters() { return true; }
+  bool LoadParameters(
+      hday::slam3d::point_cloud_aggregator::Parameters* parameters) {
+    // TODO(@chkim): Load parameters from ROS2 parameter server
+    bool success = true;
+    (void)success;
+    (void)parameters;
 
-  void InitializeSubscribers() {
-    std::vector<std::string> sensor_names = {"lidar_front", "lidar_rear",
-                                             "lidar_left", "lidar_right"};
+    return success;
+  }
 
-    for (const auto& sensor_name : sensor_names) {
-      point_cloud2_subs_[sensor_name] =
-          this->create_subscription<PointCloud2Msg>(
-              "/sensors/" + sensor_name + "/point_cloud", rclcpp::QoS(10),
-              [this, sensor_name](const PointCloud2Msg::SharedPtr msg) {
-                this->PointCloud2Callback(sensor_name, msg);
-              });
+  void InitializeSubscribers(const SensorTopicInfo& sensor_topic_info) {
+    // Subscribe lidars
+    const auto& lidar_name_and_topic_names =
+        sensor_topic_info.lidar_name_and_topic_names;
+    point_cloud2_subs_.clear();
+    point_cloud2_subs_.reserve(lidar_name_and_topic_names.size());
+    for (const auto& [sensor_name, topic_name] : lidar_name_and_topic_names) {
+      point_cloud2_subs_.insert(
+          {sensor_name,
+           this->create_subscription<PointCloud2Msg>(
+               topic_name, rclcpp::QoS(10),
+               [this, sensor_name](const PointCloud2Msg::SharedPtr msg) {
+                 this->PointCloud2Callback(sensor_name, msg);
+               })});
     }
 
+    // Subscribe IMU
+    const auto& imu_name_and_topic_name =
+        sensor_topic_info.imu_name_and_topic_name;
     imu_sub_ = this->create_subscription<ImuMsg>(
-        "imu/data", rclcpp::QoS(10),
+        imu_name_and_topic_name.second, rclcpp::QoS(10),
         std::bind(&PointCloudAggregatorRos2::ImuCallback, this,
                   std::placeholders::_1));
   }
@@ -83,6 +129,7 @@ class PointCloudAggregatorRos2 : public rclcpp::Node {
   void PointCloud2Callback(const std::string& sensor_name,
                            const PointCloud2Msg::SharedPtr msg) {
     (void)sensor_name;
+    (void)msg;
     if (point_cloud_aggregator_ != nullptr) {
       // TODO(@chkim): Convert PointCloud2Msg to PointCloud and call
       // AddPointCloud.
